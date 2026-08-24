@@ -7,20 +7,19 @@ class FakeMqttClient implements MqttClientPort {
   ended = false
   #messageListener: ((topic: string, payload: MqttPayload) => void) | undefined
 
-  on(event: "message", listener: (topic: string, payload: MqttPayload) => void) {
-    if (event === "message") this.#messageListener = listener
-    return this
+  onMessage(listener: (topic: string, payload: MqttPayload) => void) {
+    this.#messageListener = listener
   }
 
-  async publishAsync(topic: string, payload: string) {
+  async publish(topic: string, payload: string) {
     this.publishes.push({ topic, payload })
   }
 
-  async subscribeAsync(topic: string, _options: { qos: 0 }) {
+  async subscribe(topic: string) {
     this.subscriptions.push(topic)
   }
 
-  async endAsync() {
+  async close() {
     this.ended = true
   }
 
