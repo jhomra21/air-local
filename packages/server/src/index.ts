@@ -1,4 +1,5 @@
-import type { CapabilityWriteRequest } from "@air/protocol"
+import type { DeviceSnapshot } from "@air/core"
+import type { AirEvent, CapabilityWriteRequest } from "@air/protocol"
 import { routes } from "@air/protocol"
 import { mockCore200SPlugin } from "./mock-core200s"
 import { AirRuntime } from "./runtime"
@@ -10,13 +11,43 @@ type JsonValue = null | boolean | number | string | readonly JsonValue[] | { rea
 
 type CapabilityWriteValue = CapabilityWriteRequest["value"]
 
+const corsHeaders = {
+  "access-control-allow-origin": "*",
+  "access-control-allow-headers": "content-type",
+  "access-control-allow-methods": "GET,PUT,OPTIONS",
+}
+
 function json<T>(value: T, status = 200) {
-  return Response.json(value, {
-    status,
+  return Response.json(value, { status, headers: corsHeaders })
+}
+
+function eventFrame(device: DeviceSnapshot) {
+  const event: AirEvent = { type: "device.state", device }
+  return `data: ${JSON.stringify(event)}\n\n`
+}
+
+function eventStream(runtime: AirRuntime, request: Request) {
+  const encoder = new TextEncoder()
+  let unsubscribe = () => undefined
+
+  const stream = new ReadableStream<Uint8Array>({
+    start(controller) {
+      for (const device of runtime.listDevices()) controller.enqueue(encoder.encode(eventFrame(device)))
+      unsubscribe = runtime.subscribe((device) => {
+        controller.enqueue(encoder.encode(eventFrame(device)))
+      })
+      request.signal.addEventListener("abort", unsubscribe, { once: true })
+    },
+    cancel() {
+      unsubscribe()
+    },
+  })
+
+  return new Response(stream, {
     headers: {
-      "access-control-allow-origin": "*",
-      "access-control-allow-headers": "content-type",
-      "access-control-allow-methods": "GET,PUT,OPTIONS",
+      ...corsHeaders,
+      "cache-control": "no-cache",
+      "content-type": "text/event-stream; charset=utf-8",
     },
   })
 }
@@ -75,6 +106,9 @@ export async function createAirServer(options: AirServerOptions = {}) {
       if (request.method === "OPTIONS") return json(null, 204)
       if (request.method === "GET" && url.pathname === routes.devices) {
         return json({ devices: runtime.listDevices() })
+      }
+      if (request.method === "GET" && url.pathname === routes.events) {
+        return eventStream(runtime, request)
       }
 
       const match = url.pathname.match(/^\/v1\/devices\/([^/]+)\/capabilities$/)
