@@ -14,10 +14,30 @@ export interface MqttPayload {
 }
 
 export interface MqttClientPort {
-  on(event: "message", listener: (topic: string, payload: MqttPayload) => void): unknown
-  publishAsync(topic: string, payload: string): Promise<unknown>
-  subscribeAsync(topic: string, options: { qos: 0 }): Promise<unknown>
-  endAsync(): Promise<void>
+  onMessage(listener: (topic: string, payload: MqttPayload) => void): void
+  publish(topic: string, payload: string): Promise<void>
+  subscribe(topic: string): Promise<void>
+  close(): Promise<void>
+}
+
+class MqttJsClientPort implements MqttClientPort {
+  constructor(private readonly client: MqttClient) {}
+
+  onMessage(listener: (topic: string, payload: MqttPayload) => void) {
+    this.client.on("message", listener)
+  }
+
+  async publish(topic: string, payload: string) {
+    await this.client.publishAsync(topic, payload)
+  }
+
+  async subscribe(topic: string) {
+    await this.client.subscribeAsync(topic, { qos: 0 })
+  }
+
+  async close() {
+    await this.client.endAsync()
+  }
 }
 
 export class MqttTransport {
@@ -29,7 +49,7 @@ export class MqttTransport {
   constructor(broker: string, client: MqttClientPort) {
     this.broker = broker
     this.#client = client
-    this.#client.on("message", (topic, payload) => {
+    this.#client.onMessage((topic, payload) => {
       const listeners = this.#listeners.get(topic)
       if (!listeners) return
       const text = payload.toString("utf8")
@@ -38,7 +58,7 @@ export class MqttTransport {
   }
 
   async publish(topic: string, payload: string) {
-    await this.#client.publishAsync(topic, payload)
+    await this.#client.publish(topic, payload)
   }
 
   async subscribe(topic: string, listener: MqttMessageListener) {
@@ -50,7 +70,7 @@ export class MqttTransport {
     listeners.add(listener)
 
     if (!this.#subscribed.has(topic)) {
-      await this.#client.subscribeAsync(topic, { qos: 0 })
+      await this.#client.subscribe(topic)
       this.#subscribed.add(topic)
     }
 
@@ -62,7 +82,7 @@ export class MqttTransport {
   async close() {
     this.#listeners.clear()
     this.#subscribed.clear()
-    await this.#client.endAsync()
+    await this.#client.close()
   }
 }
 
@@ -75,6 +95,6 @@ function clientOptions(options: MqttTransportOptions): IClientOptions {
 }
 
 export async function createMqttTransport(options: MqttTransportOptions) {
-  const client: MqttClient = await connectAsync(options.broker, clientOptions(options))
-  return new MqttTransport(options.broker, client)
+  const client = await connectAsync(options.broker, clientOptions(options))
+  return new MqttTransport(options.broker, new MqttJsClientPort(client))
 }
