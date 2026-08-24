@@ -53,6 +53,13 @@
       "name": "@air/core",
       "version": "0.0.0",
     },
+    "packages/plugin-levoit": {
+      "name": "@air/plugin-levoit",
+      "version": "0.0.0",
+      "dependencies": {
+        "@air/core": "workspace:*",
+      },
+    },
     "packages/protocol": {
       "name": "@air/protocol",
       "version": "0.0.0",
@@ -77,6 +84,8 @@
     "@air/core": ["@air/core@workspace:packages/core"],
 
     "@air/daemon": ["@air/daemon@workspace:apps/daemon"],
+
+    "@air/plugin-levoit": ["@air/plugin-levoit@workspace:packages/plugin-levoit"],
 
     "@air/protocol": ["@air/protocol@workspace:packages/protocol"],
 
