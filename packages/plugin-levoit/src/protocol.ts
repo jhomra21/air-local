@@ -28,12 +28,12 @@ export function core200sTopics(deviceId: string): Core200STopics {
   }
 }
 
-function property(value: JsonValue, key: string): JsonValue | undefined {
+function property(value: JsonValue | undefined, key: string): JsonValue | undefined {
   if (!(value instanceof Object)) return undefined
   return Object.getOwnPropertyDescriptor(value, key)?.value
 }
 
-function isStringValue(value: JsonValue): value is string {
+function isStringValue(value: JsonValue | undefined): value is string {
   try {
     return String.prototype.valueOf.call(value) === value
   } catch {
@@ -41,11 +41,11 @@ function isStringValue(value: JsonValue): value is string {
   }
 }
 
-function isFiniteNumber(value: JsonValue): value is number {
+function isFiniteNumber(value: JsonValue | undefined): value is number {
   return Number.isFinite(value)
 }
 
-function isBooleanValue(value: JsonValue): value is boolean {
+function isBooleanValue(value: JsonValue | undefined): value is boolean {
   return value === true || value === false
 }
 
@@ -56,7 +56,7 @@ function statusValue(root: JsonValue, key: string): JsonValue | undefined {
   return property(changed, key) ?? property(unchanged, key)
 }
 
-function onOff(value: JsonValue): boolean | undefined {
+function onOff(value: JsonValue | undefined): boolean | undefined {
   if (!isStringValue(value)) return undefined
   if (value === "on") return true
   if (value === "off") return false
@@ -103,8 +103,12 @@ function booleanCapability(value: CapabilityValue): boolean | undefined {
   return value === true || value === false ? value : undefined
 }
 
+function isFiniteCapabilityNumber(value: CapabilityValue): value is number {
+  return Number.isFinite(value)
+}
+
 function numberCapability(value: CapabilityValue): number | undefined {
-  return Number.isFinite(value) ? value : undefined
+  return isFiniteCapabilityNumber(value) ? value : undefined
 }
 
 function stringCapability(value: CapabilityValue): string | undefined {
