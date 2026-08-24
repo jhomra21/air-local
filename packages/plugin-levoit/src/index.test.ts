@@ -36,10 +36,14 @@ describe("Levoit plugin", () => {
 
     const firstDriver = drivers[0]
     const secondDriver = drivers[1]
-    if (!firstDriver || !secondDriver) throw new Error("expected one driver per configured purifier")
+    const firstCandidate = candidates[0]
+    const secondCandidate = candidates[1]
+    if (!firstDriver || !secondDriver || !firstCandidate || !secondCandidate) {
+      throw new Error("expected one driver and candidate per configured purifier")
+    }
 
-    expect(await firstDriver.match(candidates[0]!)).toBeDefined()
-    expect(await firstDriver.match(candidates[1]!)).toBeUndefined()
-    expect(await secondDriver.match(candidates[1]!)).toBeDefined()
+    expect(await firstDriver.match(firstCandidate)).toBeDefined()
+    expect(await firstDriver.match(secondCandidate)).toBeUndefined()
+    expect(await secondDriver.match(secondCandidate)).toBeDefined()
   })
 })
