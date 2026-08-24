@@ -9,11 +9,11 @@ export interface MqttTransportOptions {
   password?: string
 }
 
-interface MqttPayload {
+export interface MqttPayload {
   toString(encoding?: BufferEncoding): string
 }
 
-interface MqttClientPort {
+export interface MqttClientPort {
   on(event: "message", listener: (topic: string, payload: MqttPayload) => void): unknown
   publishAsync(topic: string, payload: string): Promise<unknown>
   subscribeAsync(topic: string, options: { qos: 0 }): Promise<unknown>
