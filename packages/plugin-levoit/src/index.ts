@@ -46,7 +46,7 @@ function initialSnapshot(options: Core200SPluginOptions): DeviceSnapshot {
 class Core200SConnection implements DeviceConnection {
   #snapshot: DeviceSnapshot
   #listeners = new Set<DeviceStateListener>()
-  #unsubscribe = () => undefined
+  #unsubscribe: () => void = () => undefined
   #fanSpeed = 1
 
   constructor(private readonly options: Core200SPluginOptions) {
