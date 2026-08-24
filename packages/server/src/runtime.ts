@@ -21,10 +21,13 @@ interface ConnectedDevice {
   driverId: string
 }
 
+export type DeviceRuntimeListener = (snapshot: DeviceSnapshot) => void
+
 export class AirRuntime {
   #plugins = new Map<string, AirPlugin>()
   #drivers: RegisteredDriver[] = []
   #devices = new Map<string, ConnectedDevice>()
+  #listeners = new Set<DeviceRuntimeListener>()
 
   register(plugin: AirPlugin) {
     if (this.#plugins.has(plugin.id)) throw new Error(`plugin_already_registered:${plugin.id}`)
@@ -35,6 +38,13 @@ export class AirRuntime {
         throw new Error(`driver_already_registered:${plugin.id}/${driver.id}`)
       }
       this.#drivers.push({ pluginId: plugin.id, driver })
+    }
+  }
+
+  subscribe(listener: DeviceRuntimeListener) {
+    this.#listeners.add(listener)
+    return () => {
+      this.#listeners.delete(listener)
     }
   }
 
@@ -78,10 +88,11 @@ export class AirRuntime {
       driverId: best.driver.id,
       unsubscribe: () => undefined,
     }
-    connected.unsubscribe = connection.subscribe((next) => {
-      connected.snapshot = next
-    })
     this.#devices.set(snapshot.id, connected)
+    connected.unsubscribe = connection.subscribe((next) => {
+      this.#updateSnapshot(connected, next)
+    })
+    this.#emit(snapshot)
     return snapshot
   }
 
@@ -108,7 +119,7 @@ export class AirRuntime {
     const device = this.#devices.get(deviceId)
     if (!device) throw new Error(`device_not_found:${deviceId}`)
     const snapshot = await device.connection.write(capability, value)
-    device.snapshot = snapshot
+    this.#updateSnapshot(device, snapshot)
     return snapshot
   }
 
@@ -122,5 +133,19 @@ export class AirRuntime {
 
   async close() {
     for (const id of this.#devices.keys()) await this.disconnect(id)
+    this.#listeners.clear()
+  }
+
+  #updateSnapshot(device: ConnectedDevice, snapshot: DeviceSnapshot) {
+    if (device.snapshot.revision === snapshot.revision) {
+      device.snapshot = snapshot
+      return
+    }
+    device.snapshot = snapshot
+    this.#emit(snapshot)
+  }
+
+  #emit(snapshot: DeviceSnapshot) {
+    for (const listener of this.#listeners) listener(snapshot)
   }
 }
