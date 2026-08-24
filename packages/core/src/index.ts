@@ -46,6 +46,7 @@ export type TransportAddress =
   | { kind: "ip"; host: string; port?: number }
   | { kind: "ble"; id: string }
   | { kind: "matter"; id: string }
+  | { kind: "mqtt"; broker: string; topic?: string }
   | { kind: "virtual"; id: string }
 
 export interface DiscoveryCandidate {

@@ -5,6 +5,17 @@ import { AirRuntime } from "./runtime"
 
 export { AirRuntime } from "./runtime"
 export { mockCore200SPlugin } from "./mock-core200s"
+export {
+  core200STopics,
+  createCore200SMqttPlugin,
+  encodeCore200SWrite,
+  parseCore200SStatus,
+} from "./core200s-mqtt"
+export type {
+  Core200SMqttChannel,
+  Core200SMqttPluginOptions,
+  Core200SMqttTransport,
+} from "./core200s-mqtt"
 
 type JsonValue = null | boolean | number | string | readonly JsonValue[] | { readonly [key: string]: JsonValue }
 
