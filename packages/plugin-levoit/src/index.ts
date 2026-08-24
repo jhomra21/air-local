@@ -80,14 +80,16 @@ class Core200SConnection implements DeviceConnection {
         capabilities: { ...this.#snapshot.capabilities, [capabilityId]: updated },
       }
     }
-    if (capabilityId === "fan.speed") this.#fanSpeed = updated?.kind === "number" ? updated.value : this.#fanSpeed
+    if (capabilityId === "fan.speed" && updated?.kind === "number") this.#fanSpeed = updated.value
     this.#emit()
     return this.#snapshot
   }
 
   subscribe(listener: DeviceStateListener) {
     this.#listeners.add(listener)
-    return () => this.#listeners.delete(listener)
+    return () => {
+      this.#listeners.delete(listener)
+    }
   }
 
   async close() {
@@ -98,19 +100,48 @@ class Core200SConnection implements DeviceConnection {
   #applyStatus(status: Core200SStatus) {
     const capabilities = { ...this.#snapshot.capabilities }
 
-    if (status.power !== undefined) capabilities.power = { ...capabilities.power!, value: status.power }
-    if (status.fanSpeed !== undefined) {
+    const power = capabilities.power
+    if (status.power !== undefined && power?.kind === "boolean") {
+      capabilities.power = { ...power, value: status.power }
+    }
+
+    const fanSpeed = capabilities["fan.speed"]
+    if (status.fanSpeed !== undefined && fanSpeed?.kind === "number") {
       this.#fanSpeed = status.fanSpeed
-      capabilities["fan.speed"] = { ...capabilities["fan.speed"]!, value: status.fanSpeed }
+      capabilities["fan.speed"] = { ...fanSpeed, value: status.fanSpeed }
     }
-    if (status.mode !== undefined && (status.mode === "manual" || status.mode === "sleep")) {
-      capabilities.mode = { ...capabilities.mode!, value: status.mode }
+
+    const mode = capabilities.mode
+    if (
+      status.mode !== undefined &&
+      mode?.kind === "enum" &&
+      (status.mode === "manual" || status.mode === "sleep")
+    ) {
+      capabilities.mode = { ...mode, value: status.mode }
     }
-    if (status.filterLife !== undefined) capabilities["filter.life"] = { ...capabilities["filter.life"]!, value: status.filterLife }
-    if (status.childLock !== undefined) capabilities["child.lock"] = { ...capabilities["child.lock"]!, value: status.childLock }
-    if (status.display !== undefined) capabilities.display = { ...capabilities.display!, value: status.display }
-    if (status.nightLight !== undefined && ["off", "dim", "on"].includes(status.nightLight)) {
-      capabilities["night.light"] = { ...capabilities["night.light"]!, value: status.nightLight }
+
+    const filterLife = capabilities["filter.life"]
+    if (status.filterLife !== undefined && filterLife?.kind === "number") {
+      capabilities["filter.life"] = { ...filterLife, value: status.filterLife }
+    }
+
+    const childLock = capabilities["child.lock"]
+    if (status.childLock !== undefined && childLock?.kind === "boolean") {
+      capabilities["child.lock"] = { ...childLock, value: status.childLock }
+    }
+
+    const display = capabilities.display
+    if (status.display !== undefined && display?.kind === "boolean") {
+      capabilities.display = { ...display, value: status.display }
+    }
+
+    const nightLight = capabilities["night.light"]
+    if (
+      status.nightLight !== undefined &&
+      nightLight?.kind === "enum" &&
+      (status.nightLight === "off" || status.nightLight === "dim" || status.nightLight === "on")
+    ) {
+      capabilities["night.light"] = { ...nightLight, value: status.nightLight }
     }
 
     this.#snapshot = {
