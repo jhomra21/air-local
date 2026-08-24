@@ -1,0 +1,11 @@
+{
+  "name": "@air/transport-mqtt",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "mqtt": "5.15.2"
+  },
+  "exports": { ".": "./src/index.ts" },
+  "scripts": { "build": "true", "typecheck": "tsc -p tsconfig.json --noEmit" }
+}
