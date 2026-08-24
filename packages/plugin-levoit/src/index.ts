@@ -6,6 +6,7 @@ import {
   type DeviceConnection,
   type DeviceSnapshot,
   type DeviceStateListener,
+  type DiscoveryCandidate,
 } from "@air/core"
 import { core200sTopics, encodeCore200SCommand, parseCore200SStatus, type Core200SStatus } from "./protocol"
 
@@ -162,6 +163,20 @@ class Core200SConnection implements DeviceConnection {
   }
 }
 
+function core200sCandidates(devices: readonly Core200SPluginOptions[]): DiscoveryCandidate[] {
+  const candidates: DiscoveryCandidate[] = []
+  for (const device of devices) {
+    const topics = core200sTopics(device.deviceId)
+    candidates.push({
+      id: `levoit-mqtt:${device.deviceId}`,
+      source: "levoit-mqtt",
+      addresses: [{ kind: "mqtt", broker: device.transport.broker, topicPrefix: topics.command.slice(0, -7) }],
+      metadata: { manufacturer: "Levoit", model: "Core 200S", deviceId: device.deviceId },
+    })
+  }
+  return candidates
+}
+
 export function createLevoitPlugin(options: LevoitPluginOptions) {
   return definePlugin({
     id: "levoit",
@@ -169,15 +184,7 @@ export function createLevoitPlugin(options: LevoitPluginOptions) {
       {
         id: "configured-core200s",
         async scan() {
-          return options.core200s.map((device) => {
-            const topics = core200sTopics(device.deviceId)
-            return {
-              id: `levoit-mqtt:${device.deviceId}`,
-              source: "levoit-mqtt",
-              addresses: [{ kind: "mqtt" as const, broker: device.transport.broker, topicPrefix: topics.command.slice(0, -7) }],
-              metadata: { manufacturer: "Levoit", model: "Core 200S", deviceId: device.deviceId },
-            }
-          })
+          return core200sCandidates(options.core200s)
         },
       },
     ],
