@@ -95,20 +95,36 @@ export function definePlugin(plugin: AirPlugin): AirPlugin {
   return plugin
 }
 
+function isBooleanValue(value: CapabilityValue): value is boolean {
+  return value === true || value === false
+}
+
+function isFiniteNumber(value: CapabilityValue): value is number {
+  return Number.isFinite(value)
+}
+
+function isStringValue(value: CapabilityValue): value is string {
+  try {
+    return String.prototype.valueOf.call(value) === value
+  } catch {
+    return false
+  }
+}
+
 export function withCapabilityValue(capability: Capability, value: CapabilityValue): Capability | undefined {
   if (!capability.writable) return undefined
 
-  if (capability.kind === "boolean" && typeof value === "boolean") {
+  if (capability.kind === "boolean" && isBooleanValue(value)) {
     return { ...capability, value }
   }
 
-  if (capability.kind === "number" && typeof value === "number" && Number.isFinite(value)) {
+  if (capability.kind === "number" && isFiniteNumber(value)) {
     if (capability.min !== undefined && value < capability.min) return undefined
     if (capability.max !== undefined && value > capability.max) return undefined
     return { ...capability, value }
   }
 
-  if (capability.kind === "enum" && typeof value === "string" && capability.values.includes(value)) {
+  if (capability.kind === "enum" && isStringValue(value) && capability.values.includes(value)) {
     return { ...capability, value }
   }
 
