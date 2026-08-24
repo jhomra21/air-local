@@ -121,6 +121,6 @@ export class AirRuntime {
   }
 
   async close() {
-    for (const id of [...this.#devices.keys()]) await this.disconnect(id)
+    for (const id of this.#devices.keys()) await this.disconnect(id)
   }
 }
