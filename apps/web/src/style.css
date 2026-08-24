@@ -12,9 +12,13 @@ article { background: white; border: 1px solid #deded9; border-radius: 20px; pad
 h2 { margin: 0; font-size: 22px; letter-spacing: -.025em; }
 .title p { margin: 4px 0 0; color: #6b6b66; }
 .title span { font-size: 12px; padding: 6px 9px; background: #f0f0ed; border-radius: 999px; }
-.capabilities { margin: 20px 0; border-top: 1px solid #ecece8; }
-.row { display: flex; justify-content: space-between; padding: 11px 0; border-bottom: 1px solid #ecece8; font-size: 14px; }
+.capabilities { margin: 20px 0 0; border-top: 1px solid #ecece8; }
+.capability { padding: 11px 0; border-bottom: 1px solid #ecece8; }
+.row { display: flex; justify-content: space-between; font-size: 14px; }
 .row span { color: #696965; }
+.controls { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 10px; }
 button { border: 1px solid #d2d2cc; background: white; border-radius: 10px; padding: 9px 12px; cursor: pointer; }
-.primary { width: 100%; background: #111; color: white; border-color: #111; }
+button:hover { background: #f5f5f2; }
+button.selected { background: #111; color: white; border-color: #111; }
+button:disabled { cursor: default; opacity: .5; }
 .error { color: #b42318; }
