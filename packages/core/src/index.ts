@@ -1,5 +1,6 @@
 export type DeviceId = string
 export type CapabilityId = string
+export type CapabilityValue = boolean | number | string
 
 export type BooleanCapability = {
   kind: "boolean"
@@ -39,4 +40,77 @@ export interface DeviceSnapshot {
   online: boolean
   revision: number
   capabilities: CapabilitySet
+}
+
+export type TransportAddress =
+  | { kind: "ip"; host: string; port?: number }
+  | { kind: "ble"; id: string }
+  | { kind: "matter"; id: string }
+  | { kind: "virtual"; id: string }
+
+export interface DiscoveryCandidate {
+  id: string
+  source: string
+  addresses: readonly TransportAddress[]
+  metadata: Readonly<Record<string, string | number | boolean>>
+}
+
+export interface DriverMatch {
+  confidence: number
+  reason?: string
+}
+
+export type DeviceStateListener = (snapshot: DeviceSnapshot) => void
+
+export interface DeviceConnection {
+  snapshot(): Promise<DeviceSnapshot>
+  write(capability: CapabilityId, value: CapabilityValue): Promise<DeviceSnapshot>
+  subscribe(listener: DeviceStateListener): () => void
+  close(): Promise<void>
+}
+
+export interface DriverContext {
+  pluginId: string
+  driverId: string
+}
+
+export interface Driver {
+  id: string
+  match(candidate: DiscoveryCandidate): Promise<DriverMatch | undefined> | DriverMatch | undefined
+  connect(candidate: DiscoveryCandidate, context: DriverContext): Promise<DeviceConnection>
+}
+
+export interface DiscoveryProvider {
+  id: string
+  scan(): Promise<readonly DiscoveryCandidate[]>
+}
+
+export interface AirPlugin {
+  id: string
+  drivers?: readonly Driver[]
+  discovery?: readonly DiscoveryProvider[]
+}
+
+export function definePlugin(plugin: AirPlugin): AirPlugin {
+  return plugin
+}
+
+export function withCapabilityValue(capability: Capability, value: CapabilityValue): Capability | undefined {
+  if (!capability.writable) return undefined
+
+  if (capability.kind === "boolean" && typeof value === "boolean") {
+    return { ...capability, value }
+  }
+
+  if (capability.kind === "number" && typeof value === "number" && Number.isFinite(value)) {
+    if (capability.min !== undefined && value < capability.min) return undefined
+    if (capability.max !== undefined && value > capability.max) return undefined
+    return { ...capability, value }
+  }
+
+  if (capability.kind === "enum" && typeof value === "string" && capability.values.includes(value)) {
+    return { ...capability, value }
+  }
+
+  return undefined
 }
