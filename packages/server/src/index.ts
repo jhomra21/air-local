@@ -1,4 +1,3 @@
-import type { CapabilityValue } from "@air/core"
 import type { CapabilityWriteRequest } from "@air/protocol"
 import { routes } from "@air/protocol"
 import { mockCore200SPlugin } from "./mock-core200s"
@@ -6,6 +5,10 @@ import { AirRuntime } from "./runtime"
 
 export { AirRuntime } from "./runtime"
 export { mockCore200SPlugin } from "./mock-core200s"
+
+type JsonValue = null | boolean | number | string | readonly JsonValue[] | { readonly [key: string]: JsonValue }
+
+type CapabilityWriteValue = CapabilityWriteRequest["value"]
 
 function json<T>(value: T, status = 200) {
   return Response.json(value, {
@@ -18,19 +21,34 @@ function json<T>(value: T, status = 200) {
   })
 }
 
-function parseWriteRequest(input: unknown): CapabilityWriteRequest | undefined {
-  if (!input || typeof input !== "object") return undefined
-  const record = input as Record<string, unknown>
-  const capability = record.capability
-  const value = record.value
-  if (typeof capability !== "string") return undefined
-  if (typeof value !== "boolean" && typeof value !== "string" && typeof value !== "number") return undefined
-  if (typeof value === "number" && !Number.isFinite(value)) return undefined
+function isFiniteNumber(value: JsonValue): value is number {
+  return Number.isFinite(value)
+}
+
+function isStringValue(value: JsonValue): value is string {
+  try {
+    return String.prototype.valueOf.call(value) === value
+  } catch {
+    return false
+  }
+}
+
+function parseCapabilityWriteValue(value: JsonValue): CapabilityWriteValue | undefined {
+  if (value === true || value === false) return value
+  if (isFiniteNumber(value)) return value
+  if (isStringValue(value)) return value
+  return undefined
+}
+
+function parseWriteRequest(input: JsonValue): CapabilityWriteRequest | undefined {
+  if (!(input instanceof Object)) return undefined
+  const capability = Object.getOwnPropertyDescriptor(input, "capability")?.value
+  const value = parseCapabilityWriteValue(Object.getOwnPropertyDescriptor(input, "value")?.value)
+  if (!isStringValue(capability) || value === undefined) return undefined
   return { capability, value }
 }
 
-function errorStatus(error: unknown) {
-  if (!(error instanceof Error)) return 500
+function errorStatus(error: Error) {
   if (error.message.startsWith("device_not_found:")) return 404
   if (error.message.startsWith("capability_not_found:")) return 404
   if (error.message.startsWith("invalid_capability_value:")) return 400
@@ -66,10 +84,11 @@ export async function createAirServer(options: AirServerOptions = {}) {
         if (!input) return json({ error: "invalid_capability_request" }, 400)
 
         try {
-          const device = await runtime.write(deviceId, input.capability, input.value as CapabilityValue)
+          const device = await runtime.write(deviceId, input.capability, input.value)
           return json({ device })
         } catch (error) {
-          return json({ error: error instanceof Error ? error.message.split(":")[0] : "internal_error" }, errorStatus(error))
+          if (!(error instanceof Error)) return json({ error: "internal_error" }, 500)
+          return json({ error: error.message.split(":")[0] }, errorStatus(error))
         }
       }
 
