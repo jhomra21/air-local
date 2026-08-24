@@ -61,6 +61,10 @@ function isFiniteNumber(value: JsonValue | undefined): value is number {
   return value !== undefined && Number.isFinite(value)
 }
 
+function isFiniteCapabilityNumber(value: CapabilityValue): value is number {
+  return Number.isFinite(value)
+}
+
 function statusValue(changed: JsonValue | undefined, unchanged: JsonValue | undefined, key: string) {
   return property(changed ?? null, key) ?? property(unchanged ?? null, key)
 }
@@ -123,7 +127,7 @@ function bypass(traceId: string, method: string, data: JsonValue) {
 }
 
 export function encodeCore200SWrite(capability: CapabilityId, value: CapabilityValue, traceId: string) {
-  if (capability === "fan.speed" && Number.isFinite(value)) {
+  if (capability === "fan.speed" && isFiniteCapabilityNumber(value)) {
     if (value < 1 || value > 3) return undefined
     return bypass(traceId, "setLevel", { id: 0, level: value, type: "wind" })
   }
