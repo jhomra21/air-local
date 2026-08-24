@@ -8,12 +8,15 @@
     "dev:web": "bun --cwd apps/web dev",
     "dev:cli": "bun --cwd apps/cli dev",
     "dev:daemon": "bun --cwd apps/daemon dev",
+    "lint": "oxlint .",
     "build": "bun run --filter '*' build",
     "typecheck": "bun run --filter '*' typecheck",
-    "test": "bun test"
+    "test": "bun test --pass-with-no-tests"
   },
   "devDependencies": {
+    "@oxlint/plugins": "1.80.0",
     "@types/bun": "latest",
+    "oxlint": "1.80.0",
     "typescript": "latest"
   }
 }

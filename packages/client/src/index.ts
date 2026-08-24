@@ -15,7 +15,8 @@ export function createAirClient(options: AirClientOptions = {}) {
     async listDevices(): Promise<DeviceSnapshot[]> {
       const response = await request(`${baseUrl}${routes.devices}`)
       if (!response.ok) throw new Error(`Failed to list devices: ${response.status}`)
-      return ((await response.json()) as DeviceListResponse).devices
+      // SAFETY: the daemon's GET /v1/devices contract returns a DeviceListResponse on success.
+      return (await response.json() as DeviceListResponse).devices
     },
 
     async setCapability(deviceId: DeviceId, input: CapabilityWriteRequest): Promise<DeviceSnapshot> {
@@ -25,7 +26,8 @@ export function createAirClient(options: AirClientOptions = {}) {
         body: JSON.stringify(input),
       })
       if (!response.ok) throw new Error(`Failed to update capability: ${response.status}`)
-      return ((await response.json()) as CapabilityWriteResponse).device
+      // SAFETY: the daemon's PUT capability contract returns a CapabilityWriteResponse on success.
+      return (await response.json() as CapabilityWriteResponse).device
     },
   }
 }

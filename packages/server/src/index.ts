@@ -1,4 +1,5 @@
 import type { Capability, DeviceSnapshot } from "@air/core"
+import type { CapabilityWriteRequest } from "@air/protocol"
 import { routes } from "@air/protocol"
 
 const devices = new Map<string, DeviceSnapshot>([
@@ -21,7 +22,9 @@ const devices = new Map<string, DeviceSnapshot>([
   ],
 ])
 
-function json(value: unknown, status = 200) {
+type JsonValue = null | boolean | number | string | readonly JsonValue[] | { readonly [key: string]: JsonValue }
+
+function json<T>(value: T, status = 200) {
   return Response.json(value, {
     status,
     headers: {
@@ -32,15 +35,53 @@ function json(value: unknown, status = 200) {
   })
 }
 
-function writableValue(capability: Capability, value: unknown): boolean | number | string | undefined {
+type CapabilityWriteValue = CapabilityWriteRequest["value"]
+
+function isFiniteNumber(value: JsonValue): value is number {
+  return Number.isFinite(value)
+}
+
+function isStringValue(value: JsonValue): value is string {
+  try {
+    return String.prototype.valueOf.call(value) === value
+  } catch {
+    return false
+  }
+}
+
+function parseCapabilityWriteValue(value: JsonValue): CapabilityWriteValue | undefined {
+  if (value === true || value === false) return value
+  if (isFiniteNumber(value)) return value
+  if (isStringValue(value)) return value
+  return undefined
+}
+
+interface ParsedCapabilityWriteRequest {
+  capability: string
+  value: CapabilityWriteValue
+}
+
+function parseCapabilityWriteRequest(input: JsonValue): ParsedCapabilityWriteRequest | undefined {
+  if (!(input instanceof Object)) return undefined
+  const capability = Object.getOwnPropertyDescriptor(input, "capability")?.value
+  const value = parseCapabilityWriteValue(Object.getOwnPropertyDescriptor(input, "value")?.value)
+  if (!isStringValue(capability) || value === undefined) return undefined
+  return { capability, value }
+}
+
+function updateCapability(capability: Capability, value: CapabilityWriteValue): Capability | undefined {
   if (!capability.writable) return undefined
-  if (capability.kind === "boolean" && typeof value === "boolean") return value
-  if (capability.kind === "number" && typeof value === "number") {
+  if (capability.kind === "boolean" && (value === true || value === false)) {
+    return { ...capability, value }
+  }
+  if (capability.kind === "number" && isFiniteNumber(value)) {
     if (capability.min !== undefined && value < capability.min) return undefined
     if (capability.max !== undefined && value > capability.max) return undefined
-    return value
+    return { ...capability, value }
   }
-  if (capability.kind === "enum" && typeof value === "string" && capability.values.includes(value)) return value
+  if (capability.kind === "enum" && isStringValue(value) && capability.values.includes(value)) {
+    return { ...capability, value }
+  }
   return undefined
 }
 
@@ -57,12 +98,13 @@ export function createAirServer() {
         const id = decodeURIComponent(match[1]!)
         const device = devices.get(id)
         if (!device) return json({ error: "device_not_found" }, 404)
-        const input = (await request.json()) as { capability?: string; value?: unknown }
-        const capability = input.capability ? device.capabilities[input.capability] : undefined
+        const input = parseCapabilityWriteRequest(await request.json())
+        if (!input) return json({ error: "invalid_capability_request" }, 400)
+        const capability = device.capabilities[input.capability]
         if (!capability) return json({ error: "capability_not_found" }, 404)
-        const value = writableValue(capability, input.value)
-        if (value === undefined) return json({ error: "invalid_capability_value" }, 400)
-        device.capabilities[input.capability!] = { ...capability, value } as Capability
+        const updatedCapability = updateCapability(capability, input.value)
+        if (!updatedCapability) return json({ error: "invalid_capability_value" }, 400)
+        device.capabilities[input.capability] = updatedCapability
         device.revision += 1
         return json({ device })
       }

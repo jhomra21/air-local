@@ -5,5 +5,5 @@
   "type": "module",
   "dependencies": { "@air/core": "workspace:*", "@air/protocol": "workspace:*" },
   "exports": { ".": "./src/index.ts" },
-  "scripts": { "build": "true", "typecheck": "tsc -p ../../tsconfig.json --noEmit" }
+  "scripts": { "build": "true", "typecheck": "tsc -p tsconfig.json --noEmit" }
 }

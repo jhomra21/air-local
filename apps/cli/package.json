@@ -8,5 +8,5 @@
     "@opentui/core": "0.4.5",
     "@opentui/keymap": "0.4.5"
   },
-  "scripts": { "dev": "bun src/index.ts", "build": "bun build src/index.ts --outdir dist --target bun", "typecheck": "tsc -p ../../tsconfig.json --noEmit" }
+  "scripts": { "dev": "bun src/index.ts", "build": "bun build src/index.ts --outdir dist --target bun --external '@opentui/core-*'", "typecheck": "tsc -p tsconfig.json --noEmit" }
 }

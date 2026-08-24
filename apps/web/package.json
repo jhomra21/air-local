@@ -5,6 +5,7 @@
   "type": "module",
   "dependencies": {
     "@air/client": "workspace:*",
+    "@air/core": "workspace:*",
     "@solidjs/web": "2.0.0-rc.1",
     "solid-js": "2.0.0-rc.1"
   },
